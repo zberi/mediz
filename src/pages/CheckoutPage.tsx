@@ -1,0 +1,381 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, MapPin, CreditCard, Banknote, Smartphone, Clock, Check, Volume2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useApp } from '@/context/AppContext';
+import { toast } from '@/hooks/use-toast';
+import { PaymentMethod, Order } from '@/types';
+import { cn } from '@/lib/utils';
+
+const CheckoutPage = () => {
+  const navigate = useNavigate();
+  const { cart, cartTotal, addresses, clearCart, addOrder, seniorMode, user } = useApp();
+  
+  const [selectedAddress, setSelectedAddress] = useState(addresses.find(a => a.isDefault)?.id || addresses[0]?.id);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  const [timeSlot, setTimeSlot] = useState('asap');
+  const [promoCode, setPromoCode] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+
+  const deliveryFee = cartTotal >= 500 ? 0 : 99;
+  const discount = promoCode.toUpperCase() === 'SAVE10' ? Math.round(cartTotal * 0.1) : 0;
+  const total = cartTotal + deliveryFee - discount;
+
+  const address = addresses.find(a => a.id === selectedAddress);
+
+  const timeSlots = [
+    { id: 'asap', label: 'As Soon As Possible', estimate: '30-60 min' },
+    { id: 'morning', label: 'Morning', estimate: '9 AM - 12 PM' },
+    { id: 'afternoon', label: 'Afternoon', estimate: '12 PM - 5 PM' },
+    { id: 'evening', label: 'Evening', estimate: '5 PM - 9 PM' },
+  ];
+
+  const paymentMethods = [
+    { id: 'cash', label: 'Cash on Delivery', icon: Banknote, desc: 'Pay when you receive' },
+    { id: 'card', label: 'Card Payment', icon: CreditCard, desc: 'Debit/Credit card' },
+    { id: 'wallet', label: 'Mobile Wallet', icon: Smartphone, desc: 'JazzCash, Easypaisa' },
+  ];
+
+  const handleConfirmOrder = () => {
+    setShowConfirmation(true);
+    if (seniorMode && 'speechSynthesis' in window) {
+      const itemNames = cart.map(i => `${i.quantity} pack of ${i.medicine.name}`).join(', ');
+      const text = `You are ordering ${itemNames}. Delivery to ${address?.fullAddress}. Total amount is ${total} rupees. Please confirm to place your order.`;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.85;
+      speechSynthesis.speak(utterance);
+    }
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!address) {
+      toast({ title: "Error", description: "Please select a delivery address", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    // Simulate order placement
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const order: Order = {
+      id: `ORD-${Date.now()}`,
+      userId: user?.id || 'guest',
+      items: cart,
+      status: 'pending',
+      totalAmount: total,
+      deliveryFee,
+      discount,
+      address,
+      paymentMethod,
+      createdAt: new Date(),
+      estimatedDelivery: new Date(Date.now() + 60 * 60 * 1000),
+      trackingUpdates: [
+        { status: 'pending', timestamp: new Date(), message: 'Order placed successfully' }
+      ]
+    };
+
+    addOrder(order);
+    clearCart();
+    
+    toast({
+      title: "Order Placed Successfully!",
+      description: `Your order #${order.id.slice(-8)} will be delivered soon.`,
+    });
+
+    navigate(`/order/${order.id}`);
+  };
+
+  if (cart.length === 0) {
+    navigate('/cart');
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen pb-40 md:pb-8">
+      {/* Header */}
+      <div className="sticky top-16 z-40 bg-card border-b border-border">
+        <div className="container flex items-center gap-4 py-4 px-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft size={20} />
+          </Button>
+          <h1 className={cn("font-bold text-foreground", seniorMode ? "text-2xl" : "text-xl")}>
+            Checkout
+          </h1>
+        </div>
+      </div>
+
+      <div className="container px-4 py-6">
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="md:col-span-2 space-y-6">
+            {/* Delivery Address */}
+            <section className="bg-card rounded-2xl border border-border p-6">
+              <h2 className={cn("font-bold text-foreground mb-4 flex items-center gap-2", seniorMode && "text-xl")}>
+                <MapPin size={20} className="text-primary" />
+                Delivery Address
+              </h2>
+              <div className="space-y-3">
+                {addresses.map((addr) => (
+                  <label
+                    key={addr.id}
+                    className={cn(
+                      "flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-colors",
+                      selectedAddress === addr.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="address"
+                      value={addr.id}
+                      checked={selectedAddress === addr.id}
+                      onChange={(e) => setSelectedAddress(e.target.value)}
+                      className="mt-1"
+                    />
+                    <div>
+                      <p className={cn("font-semibold text-foreground", seniorMode && "text-lg")}>{addr.label}</p>
+                      <p className="text-muted-foreground">{addr.fullAddress}</p>
+                      <p className="text-sm text-muted-foreground">{addr.city}, {addr.postalCode}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </section>
+
+            {/* Time Slot */}
+            <section className="bg-card rounded-2xl border border-border p-6">
+              <h2 className={cn("font-bold text-foreground mb-4 flex items-center gap-2", seniorMode && "text-xl")}>
+                <Clock size={20} className="text-primary" />
+                Delivery Time
+              </h2>
+              <div className="grid grid-cols-2 gap-3">
+                {timeSlots.map((slot) => (
+                  <label
+                    key={slot.id}
+                    className={cn(
+                      "flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-colors",
+                      timeSlot === slot.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="timeSlot"
+                        value={slot.id}
+                        checked={timeSlot === slot.id}
+                        onChange={(e) => setTimeSlot(e.target.value)}
+                      />
+                      <span className={cn("font-medium", seniorMode && "text-lg")}>{slot.label}</span>
+                    </div>
+                    <span className="text-sm text-muted-foreground ml-6">{slot.estimate}</span>
+                  </label>
+                ))}
+              </div>
+            </section>
+
+            {/* Payment Method */}
+            <section className="bg-card rounded-2xl border border-border p-6">
+              <h2 className={cn("font-bold text-foreground mb-4 flex items-center gap-2", seniorMode && "text-xl")}>
+                <CreditCard size={20} className="text-primary" />
+                Payment Method
+              </h2>
+              <div className="space-y-3">
+                {paymentMethods.map((method) => (
+                  <label
+                    key={method.id}
+                    className={cn(
+                      "flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-colors",
+                      paymentMethod === method.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="payment"
+                      value={method.id}
+                      checked={paymentMethod === method.id}
+                      onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                    />
+                    <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+                      <method.icon size={20} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className={cn("font-medium text-foreground", seniorMode && "text-lg")}>{method.label}</p>
+                      <p className="text-sm text-muted-foreground">{method.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </section>
+
+            {/* Promo Code */}
+            <section className="bg-card rounded-2xl border border-border p-6">
+              <h2 className={cn("font-bold text-foreground mb-4", seniorMode && "text-xl")}>
+                Promo Code
+              </h2>
+              <div className="flex gap-3">
+                <Input
+                  placeholder="Enter promo code"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    if (promoCode.toUpperCase() === 'SAVE10') {
+                      toast({ title: "Promo Applied!", description: "10% discount added" });
+                    } else if (promoCode) {
+                      toast({ title: "Invalid Code", description: "This promo code is not valid", variant: "destructive" });
+                    }
+                  }}
+                >
+                  Apply
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Try "SAVE10" for 10% off!</p>
+            </section>
+          </div>
+
+          {/* Order Summary */}
+          <div className="md:col-span-1">
+            <div className="bg-card rounded-2xl border border-border p-6 sticky top-36">
+              <h3 className={cn("font-bold text-foreground mb-4", seniorMode && "text-xl")}>
+                Order Summary
+              </h3>
+
+              <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
+                {cart.map((item) => (
+                  <div key={item.medicine.id} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {item.quantity}x {item.medicine.name}
+                    </span>
+                    <span>Rs. {item.medicine.price * item.quantity}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-border pt-4 space-y-3 mb-6">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span>Rs. {cartTotal}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Delivery Fee</span>
+                  <span className={deliveryFee === 0 ? "text-success" : ""}>
+                    {deliveryFee === 0 ? 'FREE' : `Rs. ${deliveryFee}`}
+                  </span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-success">
+                    <span>Discount</span>
+                    <span>-Rs. {discount}</span>
+                  </div>
+                )}
+                <div className="border-t border-border pt-3 flex justify-between">
+                  <span className={cn("font-bold text-foreground", seniorMode && "text-lg")}>Total</span>
+                  <span className={cn("font-bold text-primary", seniorMode ? "text-2xl" : "text-xl")}>
+                    Rs. {total}
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                variant="hero"
+                size="xl"
+                className="w-full"
+                onClick={handleConfirmOrder}
+              >
+                Review & Confirm Order
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmation && (
+        <div className="fixed inset-0 bg-foreground/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto animate-slide-up">
+            <h3 className={cn("font-bold text-foreground mb-4 flex items-center gap-2", seniorMode && "text-2xl")}>
+              <Check size={24} className="text-success" />
+              Confirm Your Order
+            </h3>
+
+            <div className="space-y-4 mb-6">
+              <div className="p-4 rounded-xl bg-secondary">
+                <p className="text-sm text-muted-foreground mb-1">Delivering to:</p>
+                <p className={cn("font-medium", seniorMode && "text-lg")}>{address?.fullAddress}</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-secondary">
+                <p className="text-sm text-muted-foreground mb-1">Items:</p>
+                {cart.map(item => (
+                  <p key={item.medicine.id} className={cn("font-medium", seniorMode && "text-lg")}>
+                    {item.quantity}x {item.medicine.name}
+                  </p>
+                ))}
+              </div>
+
+              <div className="p-4 rounded-xl bg-secondary">
+                <p className="text-sm text-muted-foreground mb-1">Total Amount:</p>
+                <p className={cn("font-bold text-primary", seniorMode ? "text-2xl" : "text-xl")}>
+                  Rs. {total}
+                </p>
+              </div>
+            </div>
+
+            <p className={cn("text-center text-muted-foreground mb-6", seniorMode && "text-lg")}>
+              Is this correct? Tap "Place Order" to confirm.
+            </p>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowConfirmation(false)}
+              >
+                Edit Order
+              </Button>
+              <Button
+                variant="hero"
+                className="flex-1"
+                onClick={handlePlaceOrder}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Placing Order...' : 'Place Order'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Fixed Bottom */}
+      <div className="md:hidden fixed bottom-16 left-0 right-0 bg-card border-t border-border p-4 z-40">
+        <div className="flex items-center justify-between mb-3">
+          <span className="font-medium text-foreground">Total</span>
+          <span className={cn("font-bold text-primary", seniorMode ? "text-2xl" : "text-xl")}>
+            Rs. {total}
+          </span>
+        </div>
+        <Button
+          variant="hero"
+          size="xl"
+          className="w-full"
+          onClick={handleConfirmOrder}
+        >
+          Review & Confirm Order
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default CheckoutPage;
