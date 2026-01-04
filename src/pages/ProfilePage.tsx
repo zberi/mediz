@@ -1,16 +1,29 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, Phone, MapPin, Shield, Bell, Eye, Moon, HelpCircle, LogOut, ChevronRight, Settings, Volume2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { User, Phone, MapPin, Shield, Bell, Eye, Moon, HelpCircle, LogOut, ChevronRight, Settings, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const { user, seniorMode, toggleSeniorMode, highContrast, toggleHighContrast, addresses } = useApp();
+  const { seniorMode, toggleSeniorMode, highContrast, toggleHighContrast, addresses } = useApp();
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
   
   const [notifications, setNotifications] = useState(true);
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast({
+      title: 'Signed out',
+      description: 'You have been signed out successfully.',
+    });
+    navigate('/');
+  };
 
   const menuSections = [
     {
@@ -92,11 +105,19 @@ const ProfilePage = () => {
                 "font-bold text-primary-foreground",
                 seniorMode ? "text-2xl" : "text-xl"
               )}>
-                {user?.name || 'Guest User'}
+                {user?.email?.split('@')[0] || 'Guest User'}
               </h1>
               <p className="text-primary-foreground/80">
-                {user?.phone || 'Sign in to manage your account'}
+                {user?.email || 'Sign in to manage your account'}
               </p>
+              {!user && (
+                <Link to="/auth">
+                  <Button variant="secondary" size="sm" className="mt-2 gap-2">
+                    <LogIn size={16} />
+                    Sign In
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -162,14 +183,17 @@ const ProfilePage = () => {
         ))}
 
         {/* Sign Out */}
-        <Button
-          variant="outline"
-          className="w-full gap-2 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
-          size="lg"
-        >
-          <LogOut size={18} />
-          Sign Out
-        </Button>
+        {user && (
+          <Button
+            variant="outline"
+            className="w-full gap-2 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
+            size="lg"
+            onClick={handleSignOut}
+          >
+            <LogOut size={18} />
+            Sign Out
+          </Button>
+        )}
 
         {/* App Version */}
         <p className="text-center text-sm text-muted-foreground">
