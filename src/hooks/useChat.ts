@@ -2,6 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { z } from 'zod';
+
+// Input validation schema for chat messages
+const messageSchema = z
+  .string()
+  .trim()
+  .min(1, { message: 'Message cannot be empty' })
+  .max(5000, { message: 'Message must be less than 5000 characters' });
 
 export interface ChatMessage {
   id: string;
@@ -94,18 +102,31 @@ export function useChat() {
     setMessages(data || []);
   };
 
-  // Send a message
+  // Send a message with input validation
   const sendMessage = async (content: string) => {
-    if (!user || !conversation || !content.trim()) return;
+    if (!user || !conversation) return;
+
+    // Validate input using Zod schema
+    const validationResult = messageSchema.safeParse(content);
+    if (!validationResult.success) {
+      toast({
+        title: 'Invalid Message',
+        description: validationResult.error.errors[0]?.message || 'Please enter a valid message',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const validatedContent = validationResult.data;
 
     setIsSending(true);
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('chat_messages')
         .insert({
           conversation_id: conversation.id,
           sender_id: user.id,
-          content: content.trim(),
+          content: validatedContent,
           is_from_support: false,
         })
         .select()
