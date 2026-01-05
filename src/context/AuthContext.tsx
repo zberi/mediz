@@ -7,8 +7,10 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isAdmin: boolean;
-  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName?: string, phone?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signInWithPhone: (phone: string) => Promise<{ error: Error | null }>;
+  verifyOtp: (phone: string, token: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -66,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
+  const signUp = async (email: string, password: string, fullName?: string, phone?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { data, error } = await supabase.auth.signUp({
@@ -75,7 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: {
         emailRedirectTo: redirectUrl,
         data: {
-          full_name: fullName
+          full_name: fullName,
+          phone: phone
         }
       }
     });
@@ -84,7 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Create profile
       await supabase.from('profiles').insert({
         user_id: data.user.id,
-        full_name: fullName
+        full_name: fullName,
+        phone: phone
       });
     }
 
@@ -96,6 +100,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
     });
+    return { error: error as Error | null };
+  };
+
+  const signInWithPhone = async (phone: string) => {
+    // Format phone number for Pakistan (+92)
+    const formattedPhone = phone.startsWith('+') ? phone : `+92${phone.replace(/^0/, '')}`;
+    
+    const { error } = await supabase.auth.signInWithOtp({
+      phone: formattedPhone,
+    });
+    return { error: error as Error | null };
+  };
+
+  const verifyOtp = async (phone: string, token: string) => {
+    // Format phone number for Pakistan (+92)
+    const formattedPhone = phone.startsWith('+') ? phone : `+92${phone.replace(/^0/, '')}`;
+    
+    const { data, error } = await supabase.auth.verifyOtp({
+      phone: formattedPhone,
+      token,
+      type: 'sms',
+    });
+
+    // Create profile if new user
+    if (!error && data.user) {
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
+
+      if (!existingProfile) {
+        await supabase.from('profiles').insert({
+          user_id: data.user.id,
+          phone: formattedPhone
+        });
+      }
+    }
+
     return { error: error as Error | null };
   };
 
@@ -115,6 +158,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin,
         signUp,
         signIn,
+        signInWithPhone,
+        verifyOtp,
         signOut,
       }}
     >
