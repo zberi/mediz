@@ -219,6 +219,20 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Listings Counter */}
+      <section className="py-6 px-4 border-t border-border bg-muted/30">
+        <div className="container">
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <span className={cn("font-semibold text-primary", seniorMode && "text-lg")}>
+              {medicines.length}
+            </span>
+            <span className={seniorMode ? "text-base" : "text-sm"}>
+              Pakistani licensed medicines available
+            </span>
+          </div>
+        </div>
+      </section>
+
       <ChatWidget isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
