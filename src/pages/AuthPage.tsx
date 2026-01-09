@@ -26,6 +26,14 @@ const phoneLoginSchema = z.object({
     .regex(/^(\+92|0)?[3][0-9]{9}$/, 'Please enter a valid Pakistani mobile number'),
 });
 
+const mobileLoginSchema = z.object({
+  phone: z.string()
+    .min(10, 'Please enter a valid phone number')
+    .max(13, 'Please enter a valid phone number')
+    .regex(/^(\+92|0)?[3][0-9]{9}$/, 'Please enter a valid Pakistani mobile number'),
+  name: z.string().max(100, 'Name must be less than 100 characters').optional(),
+});
+
 const signUpSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
@@ -42,6 +50,7 @@ const signUpSchema = z.object({
 
 type EmailLoginFormData = z.infer<typeof emailLoginSchema>;
 type PhoneLoginFormData = z.infer<typeof phoneLoginSchema>;
+type MobileLoginFormData = z.infer<typeof mobileLoginSchema>;
 type SignUpFormData = z.infer<typeof signUpSchema>;
 
 const AuthPage = () => {
@@ -52,13 +61,13 @@ const AuthPage = () => {
   const [otp, setOtp] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, signIn, signUp, signInWithPhone, verifyOtp, isLoading } = useAuth();
+  const { user, mobileUser, signIn, signUp, signInWithPhone, signInWithMobile, verifyOtp, isLoading } = useAuth();
 
   useEffect(() => {
-    if (user && !isLoading) {
+    if ((user || mobileUser) && !isLoading) {
       navigate('/');
     }
-  }, [user, isLoading, navigate]);
+  }, [user, mobileUser, isLoading, navigate]);
 
   const emailLoginForm = useForm<EmailLoginFormData>({
     resolver: zodResolver(emailLoginSchema),
@@ -68,6 +77,11 @@ const AuthPage = () => {
   const phoneLoginForm = useForm<PhoneLoginFormData>({
     resolver: zodResolver(phoneLoginSchema),
     defaultValues: { phone: '' },
+  });
+
+  const mobileLoginForm = useForm<MobileLoginFormData>({
+    resolver: zodResolver(mobileLoginSchema),
+    defaultValues: { phone: '', name: '' },
   });
 
   const signUpForm = useForm<SignUpFormData>({
@@ -142,6 +156,27 @@ const AuthPage = () => {
       toast({
         title: 'Welcome!',
         description: 'You have successfully logged in.',
+      });
+      navigate('/');
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleMobileLogin = async (data: MobileLoginFormData) => {
+    setIsSubmitting(true);
+    
+    const { error } = await signInWithMobile(data.phone, data.name);
+    
+    if (error) {
+      toast({
+        title: 'Login Failed',
+        description: error.message || 'Failed to login. Please try again.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Welcome!',
+        description: data.name ? `Hello ${data.name}! You are now logged in.` : 'You have successfully logged in.',
       });
       navigate('/');
     }
@@ -252,17 +287,82 @@ const AuthPage = () => {
                   </Button>
                 </div>
               ) : (
-                <Tabs defaultValue="phone" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="phone" className="gap-2">
-                      <Phone size={16} /> Mobile
+                <Tabs defaultValue="mobile" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3 mb-4">
+                    <TabsTrigger value="mobile" className="gap-1 text-xs sm:text-sm">
+                      <Phone size={14} /> Mobile
                     </TabsTrigger>
-                    <TabsTrigger value="email" className="gap-2">
-                      <Mail size={16} /> Email
+                    <TabsTrigger value="otp" className="gap-1 text-xs sm:text-sm">
+                      <KeyRound size={14} /> OTP
+                    </TabsTrigger>
+                    <TabsTrigger value="email" className="gap-1 text-xs sm:text-sm">
+                      <Mail size={14} /> Email
                     </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="phone">
+                  <TabsContent value="mobile">
+                    <Form {...mobileLoginForm}>
+                      <form onSubmit={mobileLoginForm.handleSubmit(handleMobileLogin)} className="space-y-4">
+                        <FormField
+                          control={mobileLoginForm.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Mobile Number</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                  <Input 
+                                    placeholder="03XX XXXXXXX" 
+                                    className="pl-10" 
+                                    {...field} 
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={mobileLoginForm.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Name <span className="text-muted-foreground text-xs">(optional)</span></FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                  <Input 
+                                    placeholder="Your name" 
+                                    className="pl-10" 
+                                    {...field} 
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
+                          {isSubmitting ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <>
+                              Continue <ArrowRight size={16} />
+                            </>
+                          )}
+                        </Button>
+
+                        <p className="text-xs text-muted-foreground text-center">
+                          Quick login with just your mobile number
+                        </p>
+                      </form>
+                    </Form>
+                  </TabsContent>
+
+                  <TabsContent value="otp">
                     <Form {...phoneLoginForm}>
                       <form onSubmit={phoneLoginForm.handleSubmit(handlePhoneLogin)} className="space-y-4">
                         <FormField
@@ -295,6 +395,10 @@ const AuthPage = () => {
                             </>
                           )}
                         </Button>
+
+                        <p className="text-xs text-muted-foreground text-center">
+                          Secure login with SMS verification code
+                        </p>
                       </form>
                     </Form>
                   </TabsContent>
