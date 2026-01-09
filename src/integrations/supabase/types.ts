@@ -79,6 +79,66 @@ export type Database = {
           },
         ]
       }
+      orders: {
+        Row: {
+          address: Json | null
+          created_at: string
+          customer_name: string | null
+          customer_phone: string
+          delivered_at: string | null
+          delivery_fee: number
+          discount: number
+          estimated_delivery: string | null
+          id: string
+          items: Json
+          order_number: number
+          payment_method: string
+          status: string
+          total_amount: number
+          tracking_updates: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: Json | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone: string
+          delivered_at?: string | null
+          delivery_fee?: number
+          discount?: number
+          estimated_delivery?: string | null
+          id?: string
+          items?: Json
+          order_number: number
+          payment_method?: string
+          status?: string
+          total_amount: number
+          tracking_updates?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: Json | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string
+          delivered_at?: string | null
+          delivery_fee?: number
+          discount?: number
+          estimated_delivery?: string | null
+          id?: string
+          items?: Json
+          order_number?: number
+          payment_method?: string
+          status?: string
+          total_amount?: number
+          tracking_updates?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -144,7 +204,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "seller"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -272,7 +332,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "seller"],
     },
   },
 } as const

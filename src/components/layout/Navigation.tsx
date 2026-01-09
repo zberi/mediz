@@ -1,12 +1,41 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, ShoppingCart, User, Menu, Settings } from 'lucide-react';
+import { Home, Search, ShoppingCart, User, Menu, Settings, LayoutDashboard } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 export function Header() {
   const { cartCount, seniorMode, toggleSeniorMode } = useApp();
+  const { user, isAdmin } = useAuth();
   const location = useLocation();
+  const [isSeller, setIsSeller] = useState(false);
+
+  // Check if user has seller role
+  useEffect(() => {
+    const checkSellerRole = async () => {
+      if (!user) {
+        setIsSeller(false);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .rpc('has_role', { _user_id: user.id, _role: 'seller' });
+        
+        if (!error) {
+          setIsSeller(data === true);
+        }
+      } catch (err) {
+        console.error('Error checking seller role:', err);
+      }
+    };
+
+    checkSellerRole();
+  }, [user]);
+
+  const showAdminLink = isAdmin || isSeller;
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-sm">
@@ -22,6 +51,9 @@ export function Header() {
           <NavLink to="/" icon={<Home size={20} />} label="Home" />
           <NavLink to="/medicines" icon={<Search size={20} />} label="Medicines" />
           <NavLink to="/orders" icon={<Menu size={20} />} label="Orders" />
+          {showAdminLink && (
+            <NavLink to="/admin" icon={<LayoutDashboard size={20} />} label="Admin" />
+          )}
         </div>
 
         <div className="flex items-center gap-3">
