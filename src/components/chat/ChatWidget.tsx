@@ -3,42 +3,36 @@ import { MessageCircle, X, Send, Loader2, User, Headphones } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useChat, ChatMessage } from '@/hooks/useChat';
+import { useChat, ChatMessage } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
-interface ChatWidgetProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export const ChatWidget: React.FC<ChatWidgetProps> = ({ isOpen, onClose }) => {
+export const ChatWidget: React.FC = () => {
   const { user } = useAuth();
   const { 
+    isOpen,
+    closeChat,
     conversation, 
     messages, 
     isLoading, 
     isSending, 
-    initializeConversation, 
     sendMessage 
   } = useChat();
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (isOpen && user) {
-      initializeConversation();
-    }
-  }, [isOpen, user, initializeConversation]);
+  // Get current user identifier for message ownership check
+  const currentUserId = user?.id;
+  const guestId = localStorage.getItem('chat_guest_id');
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isOpen && inputRef.current && !isLoading) {
       inputRef.current.focus();
     }
   }, [isOpen, isLoading]);
@@ -55,6 +49,12 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isOpen, onClose }) => {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const isOwnMessage = (message: ChatMessage) => {
+    if (currentUserId && message.sender_id === currentUserId) return true;
+    if (!currentUserId && message.guest_id === guestId) return true;
+    return false;
   };
 
   if (!isOpen) return null;
@@ -76,7 +76,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isOpen, onClose }) => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={onClose}
+            onClick={closeChat}
             className="text-primary-foreground hover:bg-primary-foreground/20"
           >
             <X size={20} />
@@ -106,7 +106,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ isOpen, onClose }) => {
 
               {/* Messages */}
               {messages.map((message) => (
-                <MessageBubble key={message.id} message={message} isOwn={message.sender_id === user?.id} />
+                <MessageBubble key={message.id} message={message} isOwn={isOwnMessage(message)} />
               ))}
               <div ref={messagesEndRef} />
             </div>

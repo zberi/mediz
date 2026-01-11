@@ -1,10 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 
-// Input validation schema for chat messages
+// Generate or retrieve guest ID from localStorage
+const getGuestId = (): string => {
+  const key = 'chat_guest_id';
+  let guestId = localStorage.getItem(key);
+  if (!guestId) {
+    guestId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    localStorage.setItem(key, guestId);
+  }
+  return guestId;
+};
+
 const messageSchema = z
   .string()
   .trim()
@@ -14,7 +24,8 @@ const messageSchema = z
 export interface ChatMessage {
   id: string;
   conversation_id: string;
-  sender_id: string;
+  sender_id: string | null;
+  guest_id: string | null;
   content: string;
   is_from_support: boolean;
   read_at: string | null;
@@ -23,36 +34,58 @@ export interface ChatMessage {
 
 export interface ChatConversation {
   id: string;
-  user_id: string;
+  user_id: string | null;
+  guest_id: string | null;
   subject: string;
   status: string;
   created_at: string;
   updated_at: string;
 }
 
-export function useChat() {
+interface ChatContextType {
+  isOpen: boolean;
+  openChat: () => void;
+  closeChat: () => void;
+  conversation: ChatConversation | null;
+  messages: ChatMessage[];
+  isLoading: boolean;
+  isSending: boolean;
+  sendMessage: (content: string) => Promise<void>;
+  closeConversation: () => Promise<void>;
+}
+
+const ChatContext = createContext<ChatContextType | undefined>(undefined);
+
+export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  // Fetch or create conversation
+  const guestId = getGuestId();
+
+  // Initialize or fetch conversation
   const initializeConversation = useCallback(async () => {
-    if (!user) return;
-    
     setIsLoading(true);
     try {
-      // Check for existing open conversation
-      const { data: existing, error: fetchError } = await supabase
+      // Check for existing open conversation (by user_id or guest_id)
+      let query = supabase
         .from('chat_conversations')
         .select('*')
-        .eq('user_id', user.id)
         .eq('status', 'open')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
+
+      if (user) {
+        query = query.eq('user_id', user.id);
+      } else {
+        query = query.eq('guest_id', guestId);
+      }
+
+      const { data: existing, error: fetchError } = await query.maybeSingle();
 
       if (fetchError) throw fetchError;
 
@@ -64,7 +97,8 @@ export function useChat() {
         const { data: newConvo, error: createError } = await supabase
           .from('chat_conversations')
           .insert({
-            user_id: user.id,
+            user_id: user?.id || null,
+            guest_id: user ? null : guestId,
             subject: 'Support Request',
             status: 'open'
           })
@@ -84,7 +118,7 @@ export function useChat() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, toast]);
+  }, [user, guestId, toast]);
 
   // Fetch messages for a conversation
   const fetchMessages = async (conversationId: string) => {
@@ -102,11 +136,10 @@ export function useChat() {
     setMessages(data || []);
   };
 
-  // Send a message with input validation
+  // Send a message
   const sendMessage = async (content: string) => {
-    if (!user || !conversation) return;
+    if (!conversation) return;
 
-    // Validate input using Zod schema
     const validationResult = messageSchema.safeParse(content);
     if (!validationResult.success) {
       toast({
@@ -125,16 +158,13 @@ export function useChat() {
         .from('chat_messages')
         .insert({
           conversation_id: conversation.id,
-          sender_id: user.id,
+          sender_id: user?.id || null,
+          guest_id: user ? null : guestId,
           content: validatedContent,
           is_from_support: false,
-        })
-        .select()
-        .single();
+        });
 
       if (error) throw error;
-
-      // Message will be added via realtime subscription
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -147,7 +177,7 @@ export function useChat() {
     }
   };
 
-  // Set up realtime subscription
+  // Realtime subscription
   useEffect(() => {
     if (!conversation?.id) return;
 
@@ -190,13 +220,40 @@ export function useChat() {
     }
   };
 
-  return {
-    conversation,
-    messages,
-    isLoading,
-    isSending,
-    initializeConversation,
-    sendMessage,
-    closeConversation,
-  };
-}
+  const openChat = useCallback(() => {
+    setIsOpen(true);
+    if (!conversation) {
+      initializeConversation();
+    }
+  }, [conversation, initializeConversation]);
+
+  const closeChat = useCallback(() => {
+    setIsOpen(false);
+  }, []);
+
+  return (
+    <ChatContext.Provider
+      value={{
+        isOpen,
+        openChat,
+        closeChat,
+        conversation,
+        messages,
+        isLoading,
+        isSending,
+        sendMessage,
+        closeConversation,
+      }}
+    >
+      {children}
+    </ChatContext.Provider>
+  );
+};
+
+export const useChat = () => {
+  const context = useContext(ChatContext);
+  if (!context) {
+    throw new Error('useChat must be used within a ChatProvider');
+  }
+  return context;
+};

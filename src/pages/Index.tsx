@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Shield, Truck, Clock, Heart, Star, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,32 +7,14 @@ import { CategoryGrid } from '@/components/categories/CategoryGrid';
 import { MedicineCard } from '@/components/medicines/MedicineCard';
 import { medicines } from '@/data/medicines';
 import { useApp } from '@/context/AppContext';
-import { useAuth } from '@/context/AuthContext';
-import { ChatWidget } from '@/components/chat/ChatWidget';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+import { useChat } from '@/context/ChatContext';
 import { cn } from '@/lib/utils';
 
 const Index = () => {
   const { seniorMode } = useApp();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const { openChat } = useChat();
   const featuredMedicines = medicines.slice(0, 4);
   const discountedMedicines = medicines.filter(m => m.originalPrice).slice(0, 4);
-
-  const handleChatClick = () => {
-    if (!user) {
-      toast({
-        title: 'Sign in required',
-        description: 'Please sign in to chat with our pharmacist.',
-      });
-      navigate('/auth');
-      return;
-    }
-    setIsChatOpen(true);
-  };
 
   return (
     <div className="min-h-screen pb-24 md:pb-8">
@@ -209,7 +191,7 @@ const Index = () => {
               )}>
                 Our pharmacists are available 24/7 to assist you with your health needs. Get expert advice now.
               </p>
-              <Button variant="secondary" size="lg" className="gap-2" onClick={handleChatClick}>
+              <Button variant="secondary" size="lg" className="gap-2" onClick={openChat}>
                 Chat with Pharmacist
                 <ArrowRight size={18} />
               </Button>
@@ -232,8 +214,6 @@ const Index = () => {
           </div>
         </div>
       </section>
-
-      <ChatWidget isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 };
