@@ -17,27 +17,30 @@ export type Database = {
       chat_conversations: {
         Row: {
           created_at: string
+          guest_id: string | null
           id: string
           status: string
           subject: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
+          guest_id?: string | null
           id?: string
           status?: string
           subject?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
+          guest_id?: string | null
           id?: string
           status?: string
           subject?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -46,28 +49,31 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          guest_id: string | null
           id: string
           is_from_support: boolean | null
           read_at: string | null
-          sender_id: string
+          sender_id: string | null
         }
         Insert: {
           content: string
           conversation_id: string
           created_at?: string
+          guest_id?: string | null
           id?: string
           is_from_support?: boolean | null
           read_at?: string | null
-          sender_id: string
+          sender_id?: string | null
         }
         Update: {
           content?: string
           conversation_id?: string
           created_at?: string
+          guest_id?: string | null
           id?: string
           is_from_support?: boolean | null
           read_at?: string | null
-          sender_id?: string
+          sender_id?: string | null
         }
         Relationships: [
           {

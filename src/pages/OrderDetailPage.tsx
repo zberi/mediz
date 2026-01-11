@@ -4,11 +4,13 @@ import { ArrowLeft, MapPin, Phone, MessageCircle, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OrderStatusTracker } from '@/components/orders/OrderCard';
 import { useApp } from '@/context/AppContext';
+import { useChat } from '@/context/ChatContext';
 import { cn } from '@/lib/utils';
 
 const OrderDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const { orders, seniorMode } = useApp();
+  const { openChat } = useChat();
 
   const order = orders.find(o => o.id === id);
 
@@ -167,7 +169,7 @@ const OrderDetailPage = () => {
               <Phone size={18} />
               Call Support
             </Button>
-            <Button variant="outline" className="flex-1 gap-2">
+            <Button variant="outline" className="flex-1 gap-2" onClick={openChat}>
               <MessageCircle size={18} />
               Chat with Us
             </Button>
