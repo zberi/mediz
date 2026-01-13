@@ -49,7 +49,6 @@ export function Header() {
 
         <div className="hidden md:flex items-center gap-6">
           <NavLink to="/" icon={<Home size={20} />} label="Home" />
-          <NavLink to="/medicines" icon={<Search size={20} />} label="Medicines" />
           <NavLink to="/orders" icon={<Menu size={20} />} label="Orders" />
           {showAdminLink && (
             <NavLink to="/admin" icon={<LayoutDashboard size={20} />} label="Admin" />
@@ -121,7 +120,6 @@ export function BottomNav() {
 
   const navItems = [
     { to: '/', icon: Home, label: 'Home' },
-    { to: '/medicines', icon: Search, label: 'Search' },
     { to: '/cart', icon: ShoppingCart, label: 'Cart', badge: cartCount },
     { to: '/orders', icon: Menu, label: 'Orders' },
     { to: '/profile', icon: User, label: 'Profile' },
