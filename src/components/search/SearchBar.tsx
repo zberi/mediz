@@ -167,11 +167,15 @@ export function SearchBar({ onSearch, placeholder = "Search medicines, symptoms.
     <div className={cn("relative", className)}>
       <form onSubmit={handleSearch} className="relative">
         <div className={cn(
-          "relative flex items-center bg-card border-2 rounded-2xl transition-all duration-200",
-          isFocused ? "border-primary shadow-glow" : "border-border",
+          "relative flex items-center bg-gradient-to-r from-card to-card border-2 rounded-2xl transition-all duration-300 shadow-lg",
+          isFocused 
+            ? "border-primary shadow-xl shadow-primary/20 scale-[1.01]" 
+            : "border-primary/30 hover:border-primary/50 hover:shadow-xl",
           seniorMode && "text-lg"
         )}>
-          <Search className="absolute left-4 text-muted-foreground" size={seniorMode ? 24 : 20} />
+          <div className="absolute left-4 p-2 rounded-full bg-primary/10">
+            <Search className="text-primary" size={seniorMode ? 24 : 22} />
+          </div>
           <Input
             type="text"
             value={query}
@@ -181,45 +185,50 @@ export function SearchBar({ onSearch, placeholder = "Search medicines, symptoms.
             placeholder={placeholder}
             autoFocus={autoFocus}
             className={cn(
-              "border-0 pl-12 pr-32 py-6 bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground",
-              seniorMode && "text-lg py-7"
+              "border-0 pl-16 pr-36 py-7 bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/70 text-base font-medium",
+              seniorMode && "text-lg py-8"
             )}
           />
-          <div className="absolute right-2 flex items-center gap-1">
+          <div className="absolute right-3 flex items-center gap-2">
             {query && (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={() => setQuery('')}
-                className="h-9 w-9"
+                className="h-10 w-10 hover:bg-destructive/10 hover:text-destructive"
               >
-                <X size={18} />
+                <X size={20} />
               </Button>
             )}
             <Button
               type="button"
-              variant="ghost"
+              variant="secondary"
               size="icon"
               onClick={handlePrescriptionCapture}
               disabled={isParsing}
-              className="h-9 w-9"
+              className="h-11 w-11 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border-0"
               title="Scan prescription"
             >
               {isParsing ? (
-                <Loader2 size={18} className="animate-spin" />
+                <Loader2 size={20} className="animate-spin" />
               ) : (
-                <Camera size={18} />
+                <Camera size={20} />
               )}
             </Button>
             <Button
               type="button"
-              variant={isListening ? "default" : "ghost"}
+              variant={isListening ? "default" : "secondary"}
               size="icon"
               onClick={handleVoiceSearch}
-              className={cn("h-9 w-9", isListening && "animate-pulse bg-primary text-primary-foreground")}
+              className={cn(
+                "h-11 w-11 rounded-xl border-0",
+                isListening 
+                  ? "animate-pulse bg-primary text-primary-foreground" 
+                  : "bg-primary/10 hover:bg-primary/20 text-primary"
+              )}
             >
-              <Mic size={18} />
+              <Mic size={20} />
             </Button>
           </div>
         </div>
