@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Search, Mic, X } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Search, Mic, X, Camera, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { symptomSuggestions } from '@/data/medicines';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface SearchBarProps {
   onSearch?: (query: string) => void;
@@ -18,8 +19,11 @@ export function SearchBar({ onSearch, placeholder = "Search medicines, symptoms.
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { seniorMode } = useApp();
+  const { toast } = useToast();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +31,7 @@ export function SearchBar({ onSearch, placeholder = "Search medicines, symptoms.
       if (onSearch) {
         onSearch(query);
       } else {
-        navigate(`/medicines?search=${encodeURIComponent(query)}`);
+        navigate(`/?search=${encodeURIComponent(query)}`);
       }
     }
   };
@@ -37,7 +41,7 @@ export function SearchBar({ onSearch, placeholder = "Search medicines, symptoms.
     if (onSearch) {
       onSearch(suggestion);
     } else {
-      navigate(`/medicines?search=${encodeURIComponent(suggestion)}`);
+      navigate(`/?search=${encodeURIComponent(suggestion)}`);
     }
     setIsFocused(false);
   };
@@ -61,13 +65,99 @@ export function SearchBar({ onSearch, placeholder = "Search medicines, symptoms.
         if (onSearch) {
           onSearch(transcript);
         } else {
-          navigate(`/medicines?search=${encodeURIComponent(transcript)}`);
+          navigate(`/?search=${encodeURIComponent(transcript)}`);
         }
       };
 
       recognition.start();
     } else {
-      alert('Voice search is not supported in your browser');
+      toast({
+        title: "Not Supported",
+        description: "Voice search is not supported in your browser",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handlePrescriptionCapture = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File",
+        description: "Please select an image file",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      await parsePrescription(base64);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input
+    e.target.value = '';
+  };
+
+  const parsePrescription = async (imageBase64: string) => {
+    setIsParsing(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-prescription`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ imageBase64 }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to parse prescription');
+      }
+
+      if (data.medicines && data.medicines.length > 0) {
+        const searchQuery = data.medicines.join(' ');
+        setQuery(searchQuery);
+        toast({
+          title: "Prescription Scanned",
+          description: `Found ${data.medicines.length} medicine(s): ${data.medicines.join(', ')}`,
+        });
+        if (onSearch) {
+          onSearch(searchQuery);
+        } else {
+          navigate(`/?search=${encodeURIComponent(searchQuery)}`);
+        }
+      } else {
+        toast({
+          title: "No Medicines Found",
+          description: "Could not detect any medicine names. Try a clearer image.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Prescription parse error:', error);
+      toast({
+        title: "Parse Failed",
+        description: error instanceof Error ? error.message : "Failed to parse prescription",
+        variant: "destructive"
+      });
+    } finally {
+      setIsParsing(false);
     }
   };
 
@@ -91,7 +181,7 @@ export function SearchBar({ onSearch, placeholder = "Search medicines, symptoms.
             placeholder={placeholder}
             autoFocus={autoFocus}
             className={cn(
-              "border-0 pl-12 pr-24 py-6 bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground",
+              "border-0 pl-12 pr-32 py-6 bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground",
               seniorMode && "text-lg py-7"
             )}
           />
@@ -109,16 +199,41 @@ export function SearchBar({ onSearch, placeholder = "Search medicines, symptoms.
             )}
             <Button
               type="button"
-              variant={isListening ? "accent" : "ghost"}
+              variant="ghost"
+              size="icon"
+              onClick={handlePrescriptionCapture}
+              disabled={isParsing}
+              className="h-9 w-9"
+              title="Scan prescription"
+            >
+              {isParsing ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Camera size={18} />
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant={isListening ? "default" : "ghost"}
               size="icon"
               onClick={handleVoiceSearch}
-              className={cn("h-9 w-9", isListening && "animate-pulse")}
+              className={cn("h-9 w-9", isListening && "animate-pulse bg-primary text-primary-foreground")}
             >
               <Mic size={18} />
             </Button>
           </div>
         </div>
       </form>
+
+      {/* Hidden file input for prescription capture */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileChange}
+        className="hidden"
+      />
 
       {showSuggestions && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-slide-up">
