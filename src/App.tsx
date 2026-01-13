@@ -9,7 +9,7 @@ import { ChatProvider } from "@/context/ChatContext";
 import { Header, BottomNav } from "@/components/layout/Navigation";
 import { ChatButton } from "@/components/chat/ChatButton";
 import { ChatWidget } from "@/components/chat/ChatWidget";
-import Index from "./pages/Index";
+
 import MedicinesPage from "./pages/MedicinesPage";
 import MedicineDetailPage from "./pages/MedicineDetailPage";
 import CartPage from "./pages/CartPage";
@@ -36,8 +36,7 @@ const App = () => (
                 <Header />
                 <main>
                   <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/medicines" element={<MedicinesPage />} />
+                    <Route path="/" element={<MedicinesPage />} />
                     <Route path="/medicine/:id" element={<MedicineDetailPage />} />
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
