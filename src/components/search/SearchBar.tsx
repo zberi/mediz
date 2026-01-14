@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Search, Mic, X, Camera, Loader2 } from 'lucide-react';
+import { Search, Mic, X, Camera, Loader2, ImagePlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,12 @@ import { symptomSuggestions } from '@/data/medicines';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 interface SearchBarProps {
   onSearch?: (query: string) => void;
   placeholder?: string;
@@ -24,6 +30,7 @@ export function SearchBar({
   const [isListening, setIsListening] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const {
     seniorMode
@@ -78,7 +85,11 @@ export function SearchBar({
       });
     }
   };
-  const handlePrescriptionCapture = () => {
+  const handleCameraCapture = () => {
+    cameraInputRef.current?.click();
+  };
+
+  const handleGallerySelect = () => {
     fileInputRef.current?.click();
   };
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -165,9 +176,30 @@ export function SearchBar({
             {query && <Button type="button" variant="ghost" size="icon" onClick={() => setQuery('')} className="h-10 w-10 hover:bg-destructive/10 hover:text-destructive">
                 <X size={20} />
               </Button>}
-            <Button type="button" variant="secondary" size="icon" onClick={handlePrescriptionCapture} disabled={isParsing} className="h-11 w-11 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border-0" title="Scan prescription">
-              {isParsing ? <Loader2 size={20} className="animate-spin" /> : <Camera size={20} />}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  type="button" 
+                  variant="secondary" 
+                  size="icon" 
+                  disabled={isParsing} 
+                  className="h-12 w-12 rounded-xl bg-primary/15 hover:bg-primary/25 text-primary border-2 border-primary/20 shadow-md" 
+                  title="Scan prescription"
+                >
+                  {isParsing ? <Loader2 size={22} className="animate-spin" /> : <Camera size={22} />}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleCameraCapture} className="gap-2 cursor-pointer">
+                  <Camera size={18} />
+                  <span>Take Photo</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleGallerySelect} className="gap-2 cursor-pointer">
+                  <ImagePlus size={18} />
+                  <span>Choose from Gallery</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button type="button" variant={isListening ? "default" : "secondary"} size="icon" onClick={handleVoiceSearch} className={cn("h-11 w-11 rounded-xl border-0", isListening ? "animate-pulse bg-primary text-primary-foreground" : "bg-primary/10 hover:bg-primary/20 text-primary")}>
               <Mic size={20} />
             </Button>
@@ -175,8 +207,22 @@ export function SearchBar({
         </div>
       </form>
 
-      {/* Hidden file input for prescription capture */}
-      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
+      {/* Hidden file inputs for prescription capture */}
+      <input 
+        ref={cameraInputRef} 
+        type="file" 
+        accept="image/*" 
+        capture="environment" 
+        onChange={handleFileChange} 
+        className="hidden" 
+      />
+      <input 
+        ref={fileInputRef} 
+        type="file" 
+        accept="image/*" 
+        onChange={handleFileChange} 
+        className="hidden" 
+      />
 
       {showSuggestions && <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-slide-up">
           <div className="p-3 border-b border-border">
