@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "@/context/AppContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { ChatProvider } from "@/context/ChatContext";
+import { PrescriptionProvider } from "@/context/PrescriptionContext";
 import { Header, BottomNav } from "@/components/layout/Navigation";
 import { ChatButton } from "@/components/chat/ChatButton";
 import { ChatWidget } from "@/components/chat/ChatWidget";
@@ -27,7 +28,8 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <AppProvider>
-        <ChatProvider>
+        <PrescriptionProvider>
+          <ChatProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -54,7 +56,8 @@ const App = () => (
               </div>
             </BrowserRouter>
           </TooltipProvider>
-        </ChatProvider>
+          </ChatProvider>
+        </PrescriptionProvider>
       </AppProvider>
     </AuthProvider>
   </QueryClientProvider>
