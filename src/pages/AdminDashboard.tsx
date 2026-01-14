@@ -13,7 +13,9 @@ import {
   Filter,
   RefreshCw,
   Loader2,
-  MessageSquare
+  MessageSquare,
+  FileImage,
+  Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +28,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import AdminChatSupport from '@/components/admin/AdminChatSupport';
+
+interface Prescription {
+  id: string;
+  image_path: string;
+  parsed_medicines: string[];
+  user_consent: boolean;
+}
 
 interface Order {
   id: string;
@@ -41,6 +50,8 @@ interface Order {
   payment_method: string;
   created_at: string;
   updated_at: string;
+  prescription_id: string | null;
+  prescription?: Prescription;
 }
 
 const statusConfig: Record<string, { color: string; icon: React.ElementType; label: string }> = {
@@ -64,6 +75,7 @@ const AdminDashboard = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('orders');
+  const [viewingPrescription, setViewingPrescription] = useState<{ url: string; medicines: string[] } | null>(null);
 
   // Check if user has seller role
   useEffect(() => {
@@ -108,7 +120,7 @@ const AdminDashboard = () => {
     }
   }, [authLoading, user, isAdmin, isSeller, navigate, toast]);
 
-  // Fetch orders
+  // Fetch orders with prescriptions
   const fetchOrders = async () => {
     try {
       setIsRefreshing(true);
@@ -118,8 +130,24 @@ const AdminDashboard = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      // Cast to Order type - items and address are stored as JSONB
-      setOrders((data || []) as unknown as Order[]);
+
+      // Fetch prescriptions for orders that have them
+      const ordersWithPrescriptions = await Promise.all(
+        (data || []).map(async (order: any) => {
+          if (order.prescription_id) {
+            const { data: prescription } = await supabase
+              .from('prescriptions')
+              .select('id, image_path, parsed_medicines, user_consent')
+              .eq('id', order.prescription_id)
+              .single();
+            
+            return { ...order, prescription };
+          }
+          return order;
+        })
+      );
+
+      setOrders(ordersWithPrescriptions as Order[]);
     } catch (err: any) {
       toast({
         title: 'Error',
@@ -129,6 +157,28 @@ const AdminDashboard = () => {
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
+    }
+  };
+
+  // View prescription image
+  const handleViewPrescription = async (prescription: Prescription) => {
+    try {
+      const { data } = await supabase.storage
+        .from('prescriptions')
+        .createSignedUrl(prescription.image_path, 300); // 5 minute URL
+
+      if (data?.signedUrl) {
+        setViewingPrescription({
+          url: data.signedUrl,
+          medicines: prescription.parsed_medicines as string[],
+        });
+      }
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load prescription image',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -378,6 +428,23 @@ const AdminDashboard = () => {
                           {order.address?.fullAddress || 'No address'}
                         </div>
 
+                        {/* Prescription */}
+                        {order.prescription && order.prescription.user_consent && (
+                          <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg">
+                            <FileImage className="w-4 h-4 text-primary" />
+                            <span className="text-sm text-primary font-medium">Prescription attached</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewPrescription(order.prescription!)}
+                              className="ml-auto gap-1"
+                            >
+                              <Eye className="w-3 h-3" />
+                              View
+                            </Button>
+                          </div>
+                        )}
+
                         {/* Status Update */}
                         <div className="flex items-center gap-2 pt-2 border-t border-border">
                           <span className="text-sm text-muted-foreground">Update Status:</span>
@@ -409,6 +476,36 @@ const AdminDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Prescription View Modal */}
+      {viewingPrescription && (
+        <div className="fixed inset-0 bg-foreground/50 flex items-center justify-center z-50 p-4" onClick={() => setViewingPrescription(null)}>
+          <div className="bg-card rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+              <FileImage className="w-5 h-5 text-primary" />
+              Prescription Image
+            </h3>
+            <img 
+              src={viewingPrescription.url} 
+              alt="Prescription" 
+              className="w-full rounded-lg border border-border mb-4"
+            />
+            {viewingPrescription.medicines.length > 0 && (
+              <div className="p-4 bg-secondary rounded-lg">
+                <p className="text-sm font-medium mb-2">Detected Medicines:</p>
+                <div className="flex flex-wrap gap-2">
+                  {viewingPrescription.medicines.map((med, i) => (
+                    <Badge key={i} variant="secondary">{med}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            <Button className="w-full mt-4" onClick={() => setViewingPrescription(null)}>
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

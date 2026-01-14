@@ -3,22 +3,36 @@ import { Search, Mic, X, Camera, Loader2, ImagePlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { symptomSuggestions } from '@/data/medicines';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
+import { usePrescription } from '@/context/PrescriptionContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+
 interface SearchBarProps {
   onSearch?: (query: string) => void;
   placeholder?: string;
   className?: string;
   autoFocus?: boolean;
 }
+
 export function SearchBar({
   onSearch,
   placeholder = "Search medicines, symptoms...",
@@ -29,15 +43,17 @@ export function SearchBar({
   const [isFocused, setIsFocused] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
+  const [showConsentDialog, setShowConsentDialog] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [pendingImageData, setPendingImageData] = useState<{ base64: string; file: File } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const {
-    seniorMode
-  } = useApp();
-  const {
-    toast
-  } = useToast();
+  const { seniorMode } = useApp();
+  const { user } = useAuth();
+  const { setPendingPrescription } = usePrescription();
+  const { toast } = useToast();
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
@@ -110,16 +126,23 @@ export function SearchBar({
     const reader = new FileReader();
     reader.onload = async () => {
       const base64 = reader.result as string;
-      await parsePrescription(base64);
+      // Store file for later upload
+      setPendingImageData({ base64, file });
+      // Show consent dialog
+      setShowConsentDialog(true);
     };
     reader.readAsDataURL(file);
 
     // Reset input
     e.target.value = '';
   };
-  const parsePrescription = async (imageBase64: string) => {
-    setIsParsing(true);
+
+  const handleConsentConfirm = async () => {
+    if (!pendingImageData) return;
+    
+    setIsSaving(true);
     try {
+      // Parse the prescription first
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-prescription`, {
         method: 'POST',
         headers: {
@@ -127,19 +150,81 @@ export function SearchBar({
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
         },
         body: JSON.stringify({
-          imageBase64
+          imageBase64: pendingImageData.base64
         })
       });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Failed to parse prescription');
       }
-      if (data.medicines && data.medicines.length > 0) {
-        const searchQuery = data.medicines.join(' ');
+
+      const medicines = data.medicines || [];
+      let prescriptionId: string | undefined;
+      let imagePath: string | undefined;
+
+      // If user is logged in and gave consent, store the prescription
+      if (user && consentChecked) {
+        // Upload image to storage
+        const fileName = `${user.id}/${Date.now()}-prescription.jpg`;
+        
+        // Convert base64 to blob
+        const base64Data = pendingImageData.base64.split(',')[1];
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('prescriptions')
+          .upload(fileName, blob);
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          // Continue without storing, just use for search
+        } else {
+          imagePath = uploadData.path;
+          
+          // Insert prescription record
+          const { data: prescriptionData, error: insertError } = await supabase
+            .from('prescriptions')
+            .insert({
+              user_id: user.id,
+              image_path: imagePath,
+              parsed_medicines: medicines,
+              user_consent: consentChecked,
+              consent_timestamp: new Date().toISOString(),
+            })
+            .select('id')
+            .single();
+
+          if (!insertError && prescriptionData) {
+            prescriptionId = prescriptionData.id;
+            toast({
+              title: "Prescription Saved",
+              description: "Your prescription has been securely stored",
+            });
+          }
+        }
+      }
+
+      // Store in context for checkout
+      setPendingPrescription({
+        imageBase64: pendingImageData.base64,
+        imagePath,
+        prescriptionId,
+        parsedMedicines: medicines,
+        consentGiven: consentChecked,
+      });
+
+      if (medicines.length > 0) {
+        const searchQuery = medicines.join(' ');
         setQuery(searchQuery);
         toast({
           title: "Prescription Scanned",
-          description: `Found ${data.medicines.length} medicine(s): ${data.medicines.join(', ')}`
+          description: `Found ${medicines.length} medicine(s): ${medicines.join(', ')}`
         });
         if (onSearch) {
           onSearch(searchQuery);
@@ -154,15 +239,28 @@ export function SearchBar({
         });
       }
     } catch (error) {
-      console.error('Prescription parse error:', error);
+      console.error('Prescription processing error:', error);
       toast({
-        title: "Parse Failed",
-        description: error instanceof Error ? error.message : "Failed to parse prescription",
+        title: "Processing Failed",
+        description: error instanceof Error ? error.message : "Failed to process prescription",
         variant: "destructive"
       });
     } finally {
-      setIsParsing(false);
+      setIsSaving(false);
+      setShowConsentDialog(false);
+      setConsentChecked(false);
+      setPendingImageData(null);
     }
+  };
+
+  const handleConsentCancel = () => {
+    setShowConsentDialog(false);
+    setConsentChecked(false);
+    setPendingImageData(null);
+    toast({
+      title: "Cancelled",
+      description: "Prescription scan cancelled",
+    });
   };
   const showSuggestions = isFocused && query.length === 0;
   return <div className={cn("relative", className)}>
@@ -235,5 +333,60 @@ export function SearchBar({
               </button>)}
           </div>
         </div>}
+
+      {/* Consent Dialog */}
+      <Dialog open={showConsentDialog} onOpenChange={setShowConsentDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Prescription Privacy Consent</DialogTitle>
+            <DialogDescription>
+              Your prescription image will be processed to find medicines.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {pendingImageData && (
+            <div className="my-4">
+              <img 
+                src={pendingImageData.base64} 
+                alt="Prescription preview" 
+                className="w-full h-48 object-contain rounded-lg border border-border bg-secondary"
+              />
+            </div>
+          )}
+
+          {user ? (
+            <div className="flex items-start space-x-3 p-4 bg-secondary/50 rounded-lg">
+              <Checkbox
+                id="consent"
+                checked={consentChecked}
+                onCheckedChange={(checked) => setConsentChecked(checked === true)}
+              />
+              <label htmlFor="consent" className="text-sm leading-relaxed cursor-pointer">
+                I consent to store this prescription securely. It may be shared with the pharmacy/seller to fulfill my order.
+              </label>
+            </div>
+          ) : (
+            <div className="p-4 bg-muted rounded-lg text-sm text-muted-foreground">
+              <p>Sign in to save prescriptions with your orders. Without signing in, the prescription will only be used for search.</p>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleConsentCancel} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleConsentConfirm} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Scan Prescription'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>;
 }

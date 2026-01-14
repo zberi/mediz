@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, CreditCard, Banknote, Smartphone, Clock, Check, Volume2 } from 'lucide-react';
+import { ArrowLeft, MapPin, CreditCard, Banknote, Smartphone, Clock, Check, Volume2, FileImage } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
+import { usePrescription } from '@/context/PrescriptionContext';
 import { toast } from '@/hooks/use-toast';
 import { PaymentMethod, Order } from '@/types';
 import { cn } from '@/lib/utils';
@@ -14,6 +15,7 @@ const CheckoutPage = () => {
   const navigate = useNavigate();
   const { cart, cartTotal, addresses, clearCart, addOrder, seniorMode, user: appUser } = useApp();
   const { user: authUser, mobileUser } = useAuth();
+  const { pendingPrescription, clearPrescription } = usePrescription();
   
   const [selectedAddress, setSelectedAddress] = useState(addresses.find(a => a.isDefault)?.id || addresses[0]?.id);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
@@ -92,7 +94,8 @@ const CheckoutPage = () => {
         estimated_delivery: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
         tracking_updates: [
           { status: 'pending', timestamp: new Date().toISOString(), message: 'Order placed successfully' }
-        ]
+        ],
+        prescription_id: pendingPrescription?.prescriptionId || null,
       };
 
       const { data: dbOrder, error } = await supabase
@@ -125,6 +128,7 @@ const CheckoutPage = () => {
 
         addOrder(localOrder);
         clearCart();
+        clearPrescription();
         
         toast({
           title: "Order Placed Successfully!",
@@ -153,8 +157,17 @@ const CheckoutPage = () => {
         ]
       };
 
+      // Link prescription to order if exists
+      if (pendingPrescription?.prescriptionId && dbOrder?.id) {
+        await supabase
+          .from('prescriptions')
+          .update({ order_id: dbOrder.id })
+          .eq('id', pendingPrescription.prescriptionId);
+      }
+
       addOrder(order);
       clearCart();
+      clearPrescription();
       
       toast({
         title: "Order Placed Successfully!",
@@ -326,6 +339,34 @@ const CheckoutPage = () => {
               </div>
               <p className="text-xs text-muted-foreground mt-2">Try "SAVE10" for 10% off!</p>
             </section>
+
+            {/* Prescription Attached Indicator */}
+            {pendingPrescription && (
+              <section className="bg-card rounded-2xl border border-primary/30 p-6">
+                <h2 className={cn("font-bold text-foreground mb-3 flex items-center gap-2", seniorMode && "text-xl")}>
+                  <FileImage size={20} className="text-primary" />
+                  Prescription Attached
+                </h2>
+                <div className="flex items-center gap-4">
+                  <img 
+                    src={pendingPrescription.imageBase64} 
+                    alt="Prescription" 
+                    className="w-20 h-20 object-cover rounded-lg border border-border"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">
+                      {pendingPrescription.parsedMedicines.length} medicine(s) detected
+                    </p>
+                    {pendingPrescription.consentGiven && (
+                      <p className="text-xs text-success mt-1 flex items-center gap-1">
+                        <Check size={12} />
+                        Consent given for pharmacy access
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
           </div>
 
           {/* Order Summary */}

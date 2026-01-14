@@ -99,6 +99,7 @@ export type Database = {
           items: Json
           order_number: number
           payment_method: string
+          prescription_id: string | null
           status: string
           total_amount: number
           tracking_updates: Json | null
@@ -118,6 +119,7 @@ export type Database = {
           items?: Json
           order_number: number
           payment_method?: string
+          prescription_id?: string | null
           status?: string
           total_amount: number
           tracking_updates?: Json | null
@@ -137,13 +139,63 @@ export type Database = {
           items?: Json
           order_number?: number
           payment_method?: string
+          prescription_id?: string | null
           status?: string
           total_amount?: number
           tracking_updates?: Json | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_prescription_id_fkey"
+            columns: ["prescription_id"]
+            isOneToOne: false
+            referencedRelation: "prescriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prescriptions: {
+        Row: {
+          consent_timestamp: string | null
+          created_at: string
+          id: string
+          image_path: string
+          order_id: string | null
+          parsed_medicines: Json | null
+          user_consent: boolean
+          user_id: string | null
+        }
+        Insert: {
+          consent_timestamp?: string | null
+          created_at?: string
+          id?: string
+          image_path: string
+          order_id?: string | null
+          parsed_medicines?: Json | null
+          user_consent?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          consent_timestamp?: string | null
+          created_at?: string
+          id?: string
+          image_path?: string
+          order_id?: string | null
+          parsed_medicines?: Json | null
+          user_consent?: boolean
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescriptions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
