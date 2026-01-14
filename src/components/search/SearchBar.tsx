@@ -156,7 +156,7 @@ export function SearchBar({
   const showSuggestions = isFocused && query.length === 0;
   return <div className={cn("relative", className)}>
       <form onSubmit={handleSearch} className="relative">
-        <div className={cn("relative flex items-center bg-gradient-to-r from-card to-card transition-all duration-300 shadow-lg border-8 rounded-none border-none", isFocused ? "border-primary shadow-xl shadow-primary/20 scale-[1.01]" : "border-primary/30 hover:border-primary/50 hover:shadow-xl", seniorMode && "text-lg")}>
+        <div className={cn("relative flex items-center bg-gradient-to-r from-card to-card transition-all duration-300 shadow-lg rounded-none border-none border-0", isFocused ? "border-primary shadow-xl shadow-primary/20 scale-[1.01]" : "border-primary/30 hover:border-primary/50 hover:shadow-xl", seniorMode && "text-lg")}>
           <div className="absolute left-4 p-2 rounded-full bg-primary/10">
             <Search className="text-primary" size={seniorMode ? 24 : 22} />
           </div>
