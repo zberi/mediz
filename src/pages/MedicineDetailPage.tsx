@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus, ShoppingCart, AlertTriangle, Check, Volume2 } from 'lucide-react';
+import { ArrowLeft, Minus, Plus, ShoppingCart, AlertTriangle, Check, Volume2, Package, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getMedicineById, medicines } from '@/data/medicines';
 import { MedicineCard } from '@/components/medicines/MedicineCard';
@@ -12,9 +12,9 @@ const MedicineDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart, seniorMode } = useApp();
-  const [quantity, setQuantity] = useState(1);
-
+  
   const medicine = getMedicineById(id || '');
+  const [quantity, setQuantity] = useState(medicine?.defaultQuantity || 1);
 
   if (!medicine) {
     return (
@@ -37,7 +37,8 @@ const MedicineDetailPage = () => {
 
   const handleReadAloud = () => {
     if ('speechSynthesis' in window) {
-      const text = `${medicine.name}. ${medicine.description}. Price: ${medicine.price} rupees. Dosage: ${medicine.dosage}.`;
+      const packInfo = medicine.packSize ? ` Pack size: ${medicine.packSize}.` : '';
+      const text = `${medicine.name}. ${medicine.description}. Price: ${medicine.price} rupees. Dosage: ${medicine.dosage}.${packInfo}`;
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'en-US';
       utterance.rate = 0.9;
@@ -132,6 +133,25 @@ const MedicineDetailPage = () => {
                 <span className="text-sm font-medium text-muted-foreground w-24">Dosage:</span>
                 <span className={cn("font-medium", seniorMode && "text-lg")}>{medicine.dosage}</span>
               </div>
+              {medicine.packSize && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-muted-foreground w-24">Pack Size:</span>
+                  <span className={cn("font-medium flex items-center gap-2", seniorMode && "text-lg")}>
+                    <Package size={16} className="text-muted-foreground" />
+                    {medicine.packSize}
+                    {medicine.tabletCount && ` (${medicine.tabletCount} tablets)`}
+                  </span>
+                </div>
+              )}
+              {!medicine.packSize && medicine.tabletCount && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-muted-foreground w-24">Quantity:</span>
+                  <span className={cn("font-medium flex items-center gap-2", seniorMode && "text-lg")}>
+                    <Package size={16} className="text-muted-foreground" />
+                    {medicine.tabletCount} tablets/capsules
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-muted-foreground w-24">Manufacturer:</span>
                 <span className={cn("font-medium", seniorMode && "text-lg")}>{medicine.manufacturer}</span>
@@ -152,6 +172,15 @@ const MedicineDetailPage = () => {
                   )}
                 </span>
               </div>
+              {medicine.leafletIncluded && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-muted-foreground w-24">Leaflet:</span>
+                  <span className={cn("font-medium flex items-center gap-2 text-primary", seniorMode && "text-lg")}>
+                    <FileText size={16} />
+                    Patient Information Leaflet Included
+                  </span>
+                </div>
+              )}
             </div>
 
             <p className={cn(

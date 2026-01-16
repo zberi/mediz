@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, AlertTriangle, ShoppingCart } from 'lucide-react';
+import { Plus, AlertTriangle, ShoppingCart, FileText, Package } from 'lucide-react';
 import { Medicine } from '@/types';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/context/AppContext';
@@ -28,10 +28,11 @@ export function MedicineCard({ medicine, variant = 'default' }: MedicineCardProp
       return;
     }
 
-    addToCart({ medicine, quantity: 1 });
+    const quantity = medicine.defaultQuantity || 1;
+    addToCart({ medicine, quantity });
     toast({
       title: "Added to Cart",
-      description: `${medicine.name} has been added to your cart.`,
+      description: `${quantity}x ${medicine.name} has been added to your cart.`,
     });
   };
 
@@ -53,7 +54,12 @@ export function MedicineCard({ medicine, variant = 'default' }: MedicineCardProp
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-foreground truncate">{medicine.name}</h3>
           <p className="text-sm text-muted-foreground">{medicine.genericName}</p>
-          <p className="text-primary font-bold mt-1">Rs. {medicine.price}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-primary font-bold">Rs. {medicine.price}</p>
+            {medicine.packSize && (
+              <span className="text-xs text-muted-foreground">• {medicine.packSize}</span>
+            )}
+          </div>
         </div>
         <Button
           variant="secondary"
@@ -109,14 +115,36 @@ export function MedicineCard({ medicine, variant = 'default' }: MedicineCardProp
           {medicine.name}
         </h3>
         <p className={cn(
-          "text-muted-foreground mb-2 line-clamp-1",
+          "text-muted-foreground mb-1 line-clamp-1",
           seniorMode ? "text-base" : "text-sm"
         )}>
           {medicine.genericName}
         </p>
-        <p className="text-xs text-muted-foreground mb-3">{medicine.dosage}</p>
+        <p className="text-xs text-muted-foreground">{medicine.dosage}</p>
+        
+        {/* Pack info and leaflet indicator */}
+        <div className="flex items-center gap-2 mt-2 flex-wrap">
+          {medicine.packSize && (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
+              <Package size={10} />
+              {medicine.packSize}
+            </span>
+          )}
+          {medicine.tabletCount && !medicine.packSize && (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
+              <Package size={10} />
+              {medicine.tabletCount} tablets
+            </span>
+          )}
+          {medicine.leafletIncluded && (
+            <span className="inline-flex items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-0.5 rounded">
+              <FileText size={10} />
+              Leaflet
+            </span>
+          )}
+        </div>
 
-        <div className="mt-auto flex items-center justify-between gap-2">
+        <div className="mt-auto pt-3 flex items-center justify-between gap-2">
           <div className="flex flex-col">
             <span className={cn(
               "font-bold text-primary",
