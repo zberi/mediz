@@ -34,6 +34,9 @@ export function CartItemCard({ item }: CartItemProps) {
           {medicine.name}
         </h3>
         <p className="text-sm text-muted-foreground">{medicine.dosage}</p>
+        {medicine.packSize && (
+          <p className="text-xs text-muted-foreground">{medicine.packSize}</p>
+        )}
         <p className={cn(
           "text-primary font-bold mt-1",
           seniorMode && "text-lg"

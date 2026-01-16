@@ -15,6 +15,10 @@ export interface Medicine {
   warnings?: string[];
   sideEffects?: string[];
   ageRestriction?: number;
+  tabletCount?: number; // Number of tablets/capsules in pack
+  packSize?: string; // e.g., "1 Strip", "30 Tablets", "100ml Bottle"
+  leafletIncluded?: boolean; // Whether product includes information leaflet
+  defaultQuantity?: number; // Default quantity when adding to cart
 }
 
 export interface CartItem {

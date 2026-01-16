@@ -104,6 +104,10 @@ export const medicines: Medicine[] = [
     stockQuantity: 150,
     requiresPrescription: false,
     warnings: ['Do not exceed 8 tablets in 24 hours', 'Avoid with alcohol'],
+    tabletCount: 24,
+    packSize: '2 Strips (12 each)',
+    leafletIncluded: true,
+    defaultQuantity: 1,
   },
   {
     id: 'med-002',
@@ -119,6 +123,10 @@ export const medicines: Medicine[] = [
     stockQuantity: 200,
     requiresPrescription: false,
     warnings: ['Take with food', 'Not suitable for stomach ulcer patients'],
+    tabletCount: 30,
+    packSize: '3 Strips (10 each)',
+    leafletIncluded: true,
+    defaultQuantity: 1,
   },
   {
     id: 'med-007',
@@ -135,6 +143,9 @@ export const medicines: Medicine[] = [
     requiresPrescription: false,
     ageRestriction: 12,
     warnings: ['For children 3 months to 6 years', 'Use dosing syringe provided'],
+    packSize: '60ml Bottle',
+    leafletIncluded: true,
+    defaultQuantity: 1,
   },
   {
     id: 'med-010',
@@ -150,6 +161,9 @@ export const medicines: Medicine[] = [
     stockQuantity: 75,
     requiresPrescription: false,
     warnings: ['For external use only', 'Wash hands after application'],
+    packSize: '50g Tube',
+    leafletIncluded: true,
+    defaultQuantity: 1,
   },
   {
     id: 'med-013',
@@ -165,6 +179,10 @@ export const medicines: Medicine[] = [
     stockQuantity: 180,
     requiresPrescription: false,
     warnings: ['Take with food', 'Not for prolonged use'],
+    tabletCount: 20,
+    packSize: '2 Strips (10 each)',
+    leafletIncluded: true,
+    defaultQuantity: 1,
   },
   {
     id: 'med-014',
@@ -180,6 +198,10 @@ export const medicines: Medicine[] = [
     stockQuantity: 250,
     requiresPrescription: false,
     warnings: ['Not for children under 16', 'Take with water'],
+    tabletCount: 10,
+    packSize: '1 Strip',
+    leafletIncluded: false,
+    defaultQuantity: 2,
   },
   {
     id: 'med-015',
@@ -195,6 +217,10 @@ export const medicines: Medicine[] = [
     stockQuantity: 120,
     requiresPrescription: false,
     warnings: ['Take with food', 'Do not exceed 3 doses in 24 hours'],
+    tabletCount: 16,
+    packSize: '2 Strips (8 each)',
+    leafletIncluded: true,
+    defaultQuantity: 1,
   },
   {
     id: 'med-016',
@@ -210,6 +236,10 @@ export const medicines: Medicine[] = [
     stockQuantity: 50,
     requiresPrescription: true,
     warnings: ['May cause drowsiness', 'Controlled substance', 'Risk of dependence'],
+    tabletCount: 10,
+    packSize: '1 Strip',
+    leafletIncluded: true,
+    defaultQuantity: 1,
   },
 
   // ===== COLD & FLU =====
@@ -227,6 +257,10 @@ export const medicines: Medicine[] = [
     stockQuantity: 80,
     requiresPrescription: true,
     warnings: ['Complete the full course', 'May cause diarrhea'],
+    tabletCount: 14,
+    packSize: '2 Strips (7 each)',
+    leafletIncluded: true,
+    defaultQuantity: 1,
   },
   {
     id: 'med-009',
@@ -241,6 +275,10 @@ export const medicines: Medicine[] = [
     inStock: true,
     stockQuantity: 200,
     requiresPrescription: false,
+    tabletCount: 24,
+    packSize: '24 Lozenges',
+    leafletIncluded: false,
+    defaultQuantity: 1,
   },
   {
     id: 'med-017',
