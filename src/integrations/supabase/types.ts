@@ -248,6 +248,71 @@ export type Database = {
         }
         Relationships: []
       }
+      voice_orders: {
+        Row: {
+          admin_notes: string | null
+          audio_duration_seconds: number | null
+          audio_path: string
+          consent_timestamp: string | null
+          created_at: string
+          customer_name: string | null
+          customer_phone: string
+          id: string
+          order_id: string | null
+          parsed_items: Json | null
+          processing_status: string
+          status: string
+          transcription: string | null
+          updated_at: string
+          user_consent: boolean
+          user_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          audio_duration_seconds?: number | null
+          audio_path: string
+          consent_timestamp?: string | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone: string
+          id?: string
+          order_id?: string | null
+          parsed_items?: Json | null
+          processing_status?: string
+          status?: string
+          transcription?: string | null
+          updated_at?: string
+          user_consent?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          audio_duration_seconds?: number | null
+          audio_path?: string
+          consent_timestamp?: string | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string
+          id?: string
+          order_id?: string | null
+          parsed_items?: Json | null
+          processing_status?: string
+          status?: string
+          transcription?: string | null
+          updated_at?: string
+          user_consent?: boolean
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
