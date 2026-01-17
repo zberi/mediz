@@ -10,6 +10,7 @@ import { PrescriptionProvider } from "@/context/PrescriptionContext";
 import { Header, BottomNav } from "@/components/layout/Navigation";
 import { ChatButton } from "@/components/chat/ChatButton";
 import { ChatWidget } from "@/components/chat/ChatWidget";
+import { VoiceOrderButton } from "@/components/voice-order/VoiceOrderButton";
 
 import MedicinesPage from "./pages/MedicinesPage";
 import MedicineDetailPage from "./pages/MedicineDetailPage";
@@ -51,6 +52,7 @@ const App = () => (
                   </Routes>
                 </main>
                 <BottomNav />
+                <VoiceOrderButton />
                 <ChatButton />
                 <ChatWidget />
               </div>

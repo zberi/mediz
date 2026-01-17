@@ -1,1 +1,10 @@
 project_id = "diodxjssrvuznbxgdfck"
+
+[functions.parse-prescription]
+verify_jwt = false
+
+[functions.transcribe-voice]
+verify_jwt = false
+
+[functions.parse-voice-order]
+verify_jwt = false

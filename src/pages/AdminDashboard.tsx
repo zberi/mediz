@@ -15,7 +15,8 @@ import {
   Loader2,
   MessageSquare,
   FileImage,
-  Eye
+  Eye,
+  Mic
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import AdminChatSupport from '@/components/admin/AdminChatSupport';
+import AdminVoiceOrders from '@/components/admin/AdminVoiceOrders';
 
 interface Prescription {
   id: string;
@@ -285,14 +287,18 @@ const AdminDashboard = () => {
       <div className="container px-4 py-6 space-y-6">
         {/* Tabs for Orders and Chat */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsList className="grid w-full grid-cols-3 max-w-lg">
             <TabsTrigger value="orders" className="flex items-center gap-2">
               <Package className="w-4 h-4" />
               Orders
             </TabsTrigger>
+            <TabsTrigger value="voice" className="flex items-center gap-2">
+              <Mic className="w-4 h-4" />
+              Voice Orders
+            </TabsTrigger>
             <TabsTrigger value="chat" className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
-              Chat Support
+              Chat
             </TabsTrigger>
           </TabsList>
 
@@ -469,6 +475,10 @@ const AdminDashboard = () => {
                 })
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="voice" className="mt-6">
+            <AdminVoiceOrders />
           </TabsContent>
 
           <TabsContent value="chat" className="mt-6">
