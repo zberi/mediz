@@ -4,6 +4,7 @@ import { Filter, Grid, List, SlidersHorizontal } from 'lucide-react';
 import { SearchBar } from '@/components/search/SearchBar';
 import { MedicineCard } from '@/components/medicines/MedicineCard';
 import { Button } from '@/components/ui/button';
+import { QuickOrderBanner } from '@/components/quick-order/QuickOrderBanner';
 import { medicines, categories, searchMedicines, getMedicinesByCategory } from '@/data/medicines';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
@@ -77,6 +78,9 @@ const MedicinesPage = () => {
 
   return (
     <div className="min-h-screen pb-24 md:pb-8">
+      {/* Quick Order Banner */}
+      <QuickOrderBanner />
+
       {/* Header */}
       <div className="bg-card border-b border-border sticky top-16 z-40">
         <div className="container py-4 px-4">
