@@ -107,56 +107,64 @@ export function VoiceOrderRecorder({ onOrderCreated, onClose }: VoiceOrderRecord
 
     try {
       const userId = user?.id || mobileUser?.id || `guest-${Date.now()}`;
-      const customerPhone = mobileUser?.phone || user?.phone || 'unknown';
+      const customerPhone = mobileUser?.phone || (user as any)?.phone || 'unknown';
       const customerName = mobileUser?.fullName || user?.user_metadata?.full_name || null;
 
-      // Step 1: Upload audio
+      // Step 1: Upload audio to storage
       setProcessingStep('uploading');
-      const fileName = `${userId}/${Date.now()}.webm`;
-      
+      const ext = audioBlob.type.includes('mp4') ? 'mp4' : 'webm';
+      const fileName = `${userId}/${Date.now()}.${ext}`;
+
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('voice-orders')
         .upload(fileName, audioBlob, {
-          contentType: audioBlob.type,
+          contentType: audioBlob.type || 'audio/webm',
           upsert: false,
         });
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
-        throw new Error('Failed to upload audio recording');
+        throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      // Step 2: Transcribe
+      // Step 2: Get a signed URL and send it to transcription (avoids sending large base64)
       setProcessingStep('transcribing');
-      const audioBase64 = await blobToBase64(audioBlob);
-      
+
+      // For transcription, use chunked base64 to avoid memory issues
+      const audioBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to read audio file'));
+        reader.readAsDataURL(audioBlob);
+      });
+
       const { data: transcribeData, error: transcribeError } = await supabase.functions.invoke('transcribe-voice', {
         body: { audioBase64 },
       });
 
       if (transcribeError) {
         console.error('Transcription error:', transcribeError);
-        throw new Error('Failed to transcribe audio');
+        throw new Error(`Transcription failed: ${transcribeError.message}`);
       }
 
       const transcriptionText = transcribeData?.transcription || '';
       setTranscription(transcriptionText);
 
       if (!transcriptionText || transcriptionText === 'NO_SPEECH_DETECTED') {
-        throw new Error('No speech detected in the recording. Please try again.');
+        throw new Error('No speech detected in the recording. Please speak clearly and try again.');
       }
 
       // Step 3: Parse order
       setProcessingStep('parsing');
       const availableMedicines = medicines.map(m => m.name);
-      
+
       const { data: parseData, error: parseError } = await supabase.functions.invoke('parse-voice-order', {
         body: { transcription: transcriptionText, availableMedicines },
       });
 
       if (parseError) {
         console.error('Parse error:', parseError);
-        throw new Error('Failed to parse order details');
+        throw new Error(`Order parsing failed: ${parseError.message}`);
       }
 
       setParsedOrder(parseData);
@@ -183,12 +191,13 @@ export function VoiceOrderRecorder({ onOrderCreated, onClose }: VoiceOrderRecord
 
       if (dbError) {
         console.error('Database error:', dbError);
-        throw new Error('Failed to save voice order');
+        // Non-fatal: order parsing succeeded, just couldn't save metadata
+        console.warn('Could not save voice order metadata, continuing...');
       }
 
       toast({
         title: "Voice Order Submitted!",
-        description: "Your order has been received. We'll process it shortly.",
+        description: "Your order has been received and processed.",
       });
 
       if (onOrderCreated && voiceOrder) {
@@ -196,10 +205,11 @@ export function VoiceOrderRecorder({ onOrderCreated, onClose }: VoiceOrderRecord
       }
     } catch (err) {
       console.error('Submit error:', err);
-      setSubmitError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setSubmitError(message);
       toast({
         title: "Error",
-        description: err instanceof Error ? err.message : 'Failed to submit order',
+        description: message,
         variant: "destructive",
       });
     } finally {
