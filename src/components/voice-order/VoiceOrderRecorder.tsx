@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, Pause, Play, Square, Trash2, Send, AlertCircle, CheckCircle, Loader2, Volume2 } from 'lucide-react';
+import { Mic, Pause, Play, Square, Trash2, Send, AlertCircle, CheckCircle, Loader2, Volume2, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { medicines } from '@/data/medicines';
+import { useNavigate } from 'react-router-dom';
 
 interface ParsedItem {
   name: string;
@@ -35,8 +36,9 @@ interface VoiceOrderRecorderProps {
 
 export function VoiceOrderRecorder({ onOrderCreated, onClose }: VoiceOrderRecorderProps) {
   const { user, mobileUser, isAuthenticated } = useAuth();
-  const { seniorMode } = useApp();
+  const { seniorMode, addToCart } = useApp();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const {
     isRecording,
@@ -466,8 +468,92 @@ export function VoiceOrderRecorder({ onOrderCreated, onClose }: VoiceOrderRecord
           </Button>
         )}
 
-        {/* Success State */}
-        {parsedOrder && (
+        {/* Success State - Convert to Cart / Order */}
+        {parsedOrder && parsedOrder.items.length > 0 && (
+          <div className="space-y-3">
+            <Button
+              className="w-full gap-2"
+              size="lg"
+              onClick={() => {
+                let addedCount = 0;
+                parsedOrder.items.forEach(item => {
+                  // Find matching medicine (fuzzy match by name)
+                  const match = medicines.find(m =>
+                    m.name.toLowerCase().includes(item.name.toLowerCase()) ||
+                    item.name.toLowerCase().includes(m.name.toLowerCase()) ||
+                    m.genericName.toLowerCase().includes(item.name.toLowerCase())
+                  );
+                  if (match) {
+                    addToCart({ medicine: match, quantity: item.quantity || 1 });
+                    addedCount++;
+                  }
+                });
+                if (addedCount > 0) {
+                  toast({
+                    title: `${addedCount} item(s) added to cart`,
+                    description: "Review your cart before checking out.",
+                  });
+                  onClose?.();
+                  navigate('/cart');
+                } else {
+                  toast({
+                    title: "No exact matches found",
+                    description: "Some items couldn't be matched in our catalogue. Please search manually.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              <ShoppingCart className="w-4 h-4" />
+              Add to Cart & Review
+            </Button>
+            <Button
+              className="w-full gap-2"
+              size="lg"
+              variant="outline"
+              onClick={() => {
+                let addedCount = 0;
+                parsedOrder.items.forEach(item => {
+                  const match = medicines.find(m =>
+                    m.name.toLowerCase().includes(item.name.toLowerCase()) ||
+                    item.name.toLowerCase().includes(m.name.toLowerCase()) ||
+                    m.genericName.toLowerCase().includes(item.name.toLowerCase())
+                  );
+                  if (match) {
+                    addToCart({ medicine: match, quantity: item.quantity || 1 });
+                    addedCount++;
+                  }
+                });
+                if (addedCount > 0) {
+                  onClose?.();
+                  navigate('/checkout');
+                } else {
+                  toast({
+                    title: "No exact matches found",
+                    description: "Some items couldn't be matched in our catalogue. Please search manually.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              Proceed to Checkout
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={() => {
+                resetRecording();
+                setTranscription(null);
+                setParsedOrder(null);
+                setConsent(false);
+              }}
+            >
+              Record New Order
+            </Button>
+          </div>
+        )}
+
+        {parsedOrder && parsedOrder.items.length === 0 && (
           <div className="flex gap-3">
             <Button
               variant="outline"
@@ -479,11 +565,11 @@ export function VoiceOrderRecorder({ onOrderCreated, onClose }: VoiceOrderRecord
                 setConsent(false);
               }}
             >
-              New Order
+              Try Again
             </Button>
             {onClose && (
               <Button className="flex-1" onClick={onClose}>
-                Done
+                Close
               </Button>
             )}
           </div>
