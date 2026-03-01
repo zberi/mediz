@@ -11,6 +11,7 @@ import { Header, BottomNav } from "@/components/layout/Navigation";
 import { ChatButton } from "@/components/chat/ChatButton";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { VoiceOrderButton } from "@/components/voice-order/VoiceOrderButton";
+import { QuickOrderBanner } from "@/components/quick-order/QuickOrderBanner";
 
 import MedicinesPage from "./pages/MedicinesPage";
 import MedicineDetailPage from "./pages/MedicineDetailPage";
@@ -37,6 +38,7 @@ const App = () => (
             <BrowserRouter>
               <div className="min-h-screen bg-background">
                 <Header />
+                <QuickOrderBanner />
                 <main>
                   <Routes>
                     <Route path="/" element={<MedicinesPage />} />
