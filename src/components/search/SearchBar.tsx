@@ -101,40 +101,16 @@ export function SearchBar({
       });
     }
   };
-  const handleCameraCapture = () => {
-    cameraInputRef.current?.click();
+  const onImageCaptured = (image: { base64: string; file: File }) => {
+    setPendingImageData(image);
+    setShowConsentDialog(true);
   };
 
-  const handleGallerySelect = () => {
-    fileInputRef.current?.click();
-  };
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleCameraCapture = () => capturePhoto(onImageCaptured);
+  const handleGallerySelect = () => pickPhoto(onImageCaptured);
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid File",
-        description: "Please select an image file",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Convert to base64
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      // Store file for later upload
-      setPendingImageData({ base64, file });
-      // Show consent dialog
-      setShowConsentDialog(true);
-    };
-    reader.readAsDataURL(file);
-
-    // Reset input
-    e.target.value = '';
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleWebFileChange(e, onImageCaptured);
   };
 
   const handleConsentConfirm = async () => {
