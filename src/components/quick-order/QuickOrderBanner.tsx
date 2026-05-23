@@ -186,19 +186,19 @@ export function QuickOrderBanner() {
 
             {/* Prescription / Image Order Button */}
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  disabled={isParsing}
-                  className={cn(
-                    "group relative flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-accent/40 bg-accent/10 hover:bg-accent/20 hover:border-accent/70 transition-all duration-200 active:scale-[0.97] shadow-sm hover:shadow-md w-full",
-                    seniorMode ? "py-6 px-4 min-h-[110px]" : "py-5 px-4 min-h-[96px]"
-                  )}
-                >
-                  <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-inner">
-                    {isParsing
-                      ? <Loader2 className="w-6 h-6 text-accent-foreground animate-spin" />
-                      : <Camera className="w-6 h-6 text-accent-foreground" />}
-                  </div>
+            <DropdownMenuTrigger asChild>
+              <button
+                disabled={isCapturing || isParsing}
+                className={cn(
+                  "group relative flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-accent/40 bg-accent/10 hover:bg-accent/20 hover:border-accent/70 transition-all duration-200 active:scale-[0.97] shadow-sm hover:shadow-md w-full",
+                  seniorMode ? "py-6 px-4 min-h-[110px]" : "py-5 px-4 min-h-[96px]"
+                )}
+              >
+                <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-inner">
+                  {isCapturing || isParsing
+                    ? <Loader2 className="w-6 h-6 text-accent-foreground animate-spin" />
+                    : <Camera className="w-6 h-6 text-accent-foreground" />}
+                </div>
                   <div className="text-center">
                     <p className={cn("font-bold text-accent-foreground leading-tight", seniorMode ? "text-base" : "text-sm")}>
                       Scan Prescription
