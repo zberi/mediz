@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Mic, Camera, ImagePlus, Loader2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +19,7 @@ import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { usePrescription } from '@/context/PrescriptionContext';
 import { useToast } from '@/hooks/use-toast';
+import { useNativeCamera } from '@/hooks/useNativeCamera';
 import { supabase } from '@/integrations/supabase/client';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -34,8 +35,7 @@ export function QuickOrderBanner() {
   const [consentChecked, setConsentChecked] = useState(false);
   const [pendingImageData, setPendingImageData] = useState<{ base64: string; file: File } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const { isCapturing, capturePhoto, pickPhoto, handleWebFileChange, fileInputRef, cameraInputRef } = useNativeCamera();
   const { seniorMode } = useApp();
   const { user } = useAuth();
   const { setPendingPrescription } = usePrescription();
