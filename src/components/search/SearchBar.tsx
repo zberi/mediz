@@ -48,8 +48,7 @@ export function SearchBar({
   const [consentChecked, setConsentChecked] = useState(false);
   const [pendingImageData, setPendingImageData] = useState<{ base64: string; file: File } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const { isCapturing, capturePhoto, pickPhoto, handleWebFileChange, fileInputRef, cameraInputRef } = useNativeCamera();
   const navigate = useNavigate();
   const { seniorMode } = useApp();
   const { user } = useAuth();
