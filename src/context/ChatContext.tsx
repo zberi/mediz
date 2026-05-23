@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +16,18 @@ const getGuestId = (): string => {
   }
   return guestId;
 };
+
+// Create a chat-scoped Supabase client that forwards the guest id as a header.
+// RLS policies on chat_* tables validate this header to authorize guest access.
+const createChatClient = (guestId: string) =>
+  createClient<Database>(
+    import.meta.env.VITE_SUPABASE_URL,
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    {
+      auth: { storage: localStorage, persistSession: true, autoRefreshToken: true },
+      global: { headers: { 'x-guest-id': guestId } },
+    }
+  );
 
 const messageSchema = z
   .string()
@@ -66,13 +80,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isSending, setIsSending] = useState(false);
 
   const guestId = getGuestId();
+  const chatClient = useMemo(() => createChatClient(guestId), [guestId]);
 
   // Initialize or fetch conversation
   const initializeConversation = useCallback(async () => {
     setIsLoading(true);
     try {
       // Check for existing open conversation (by user_id or guest_id)
-      let query = supabase
+      let query = chatClient
         .from('chat_conversations')
         .select('*')
         .eq('status', 'open')
@@ -94,7 +109,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetchMessages(existing.id);
       } else {
         // Create new conversation
-        const { data: newConvo, error: createError } = await supabase
+        const { data: newConvo, error: createError } = await chatClient
           .from('chat_conversations')
           .insert({
             user_id: user?.id || null,
@@ -118,11 +133,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [user, guestId, toast]);
+  }, [user, guestId, toast, chatClient]);
 
   // Fetch messages for a conversation
   const fetchMessages = async (conversationId: string) => {
-    const { data, error } = await supabase
+    const { data, error } = await chatClient
       .from('chat_messages')
       .select('*')
       .eq('conversation_id', conversationId)
@@ -154,7 +169,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setIsSending(true);
     try {
-      const { error } = await supabase
+      const { error } = await chatClient
         .from('chat_messages')
         .insert({
           conversation_id: conversation.id,
@@ -181,7 +196,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!conversation?.id) return;
 
-    const channel = supabase
+    const channel = chatClient
       .channel(`chat-${conversation.id}`)
       .on(
         'postgres_changes',
@@ -199,16 +214,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      chatClient.removeChannel(channel);
     };
-  }, [conversation?.id]);
+  }, [conversation?.id, chatClient]);
 
   // Close conversation
   const closeConversation = async () => {
     if (!conversation) return;
 
     try {
-      await supabase
+      await chatClient
         .from('chat_conversations')
         .update({ status: 'closed' })
         .eq('id', conversation.id);
