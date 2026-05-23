@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Mic, Camera, ImagePlus, Loader2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +19,7 @@ import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { usePrescription } from '@/context/PrescriptionContext';
 import { useToast } from '@/hooks/use-toast';
+import { useNativeCamera } from '@/hooks/useNativeCamera';
 import { supabase } from '@/integrations/supabase/client';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -34,8 +35,7 @@ export function QuickOrderBanner() {
   const [consentChecked, setConsentChecked] = useState(false);
   const [pendingImageData, setPendingImageData] = useState<{ base64: string; file: File } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const { isCapturing, capturePhoto, pickPhoto, handleWebFileChange, fileInputRef, cameraInputRef } = useNativeCamera();
   const { seniorMode } = useApp();
   const { user } = useAuth();
   const { setPendingPrescription } = usePrescription();
@@ -46,24 +46,16 @@ export function QuickOrderBanner() {
     setVoiceOpen(false);
   };
 
-  const handleCameraCapture = () => cameraInputRef.current?.click();
-  const handleGallerySelect = () => fileInputRef.current?.click();
+  const onImageCaptured = (image: { base64: string; file: File }) => {
+    setPendingImageData(image);
+    setShowConsentDialog(true);
+  };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast({ title: "Invalid File", description: "Please select an image file", variant: "destructive" });
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      setPendingImageData({ base64, file });
-      setShowConsentDialog(true);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+  const handleCameraCapture = () => capturePhoto(onImageCaptured);
+  const handleGallerySelect = () => pickPhoto(onImageCaptured);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleWebFileChange(e, onImageCaptured);
   };
 
   const handleConsentConfirm = async () => {
@@ -194,19 +186,19 @@ export function QuickOrderBanner() {
 
             {/* Prescription / Image Order Button */}
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  disabled={isParsing}
-                  className={cn(
-                    "group relative flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-accent/40 bg-accent/10 hover:bg-accent/20 hover:border-accent/70 transition-all duration-200 active:scale-[0.97] shadow-sm hover:shadow-md w-full",
-                    seniorMode ? "py-6 px-4 min-h-[110px]" : "py-5 px-4 min-h-[96px]"
-                  )}
-                >
-                  <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-inner">
-                    {isParsing
-                      ? <Loader2 className="w-6 h-6 text-accent-foreground animate-spin" />
-                      : <Camera className="w-6 h-6 text-accent-foreground" />}
-                  </div>
+            <DropdownMenuTrigger asChild>
+              <button
+                disabled={isCapturing || isParsing}
+                className={cn(
+                  "group relative flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-accent/40 bg-accent/10 hover:bg-accent/20 hover:border-accent/70 transition-all duration-200 active:scale-[0.97] shadow-sm hover:shadow-md w-full",
+                  seniorMode ? "py-6 px-4 min-h-[110px]" : "py-5 px-4 min-h-[96px]"
+                )}
+              >
+                <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200 shadow-inner">
+                  {isCapturing || isParsing
+                    ? <Loader2 className="w-6 h-6 text-accent-foreground animate-spin" />
+                    : <Camera className="w-6 h-6 text-accent-foreground" />}
+                </div>
                   <div className="text-center">
                     <p className={cn("font-bold text-accent-foreground leading-tight", seniorMode ? "text-base" : "text-sm")}>
                       Scan Prescription

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Search, Mic, X, Camera, Loader2, ImagePlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { usePrescription } from '@/context/PrescriptionContext';
 import { useToast } from '@/hooks/use-toast';
+import { useNativeCamera } from '@/hooks/useNativeCamera';
 import { supabase } from '@/integrations/supabase/client';
 import {
   DropdownMenu,
@@ -47,8 +48,7 @@ export function SearchBar({
   const [consentChecked, setConsentChecked] = useState(false);
   const [pendingImageData, setPendingImageData] = useState<{ base64: string; file: File } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const { isCapturing, capturePhoto, pickPhoto, handleWebFileChange, fileInputRef, cameraInputRef } = useNativeCamera();
   const navigate = useNavigate();
   const { seniorMode } = useApp();
   const { user } = useAuth();
@@ -101,40 +101,16 @@ export function SearchBar({
       });
     }
   };
-  const handleCameraCapture = () => {
-    cameraInputRef.current?.click();
+  const onImageCaptured = (image: { base64: string; file: File }) => {
+    setPendingImageData(image);
+    setShowConsentDialog(true);
   };
 
-  const handleGallerySelect = () => {
-    fileInputRef.current?.click();
-  };
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleCameraCapture = () => capturePhoto(onImageCaptured);
+  const handleGallerySelect = () => pickPhoto(onImageCaptured);
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid File",
-        description: "Please select an image file",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Convert to base64
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      // Store file for later upload
-      setPendingImageData({ base64, file });
-      // Show consent dialog
-      setShowConsentDialog(true);
-    };
-    reader.readAsDataURL(file);
-
-    // Reset input
-    e.target.value = '';
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleWebFileChange(e, onImageCaptured);
   };
 
   const handleConsentConfirm = async () => {
@@ -280,11 +256,11 @@ export function SearchBar({
                   type="button" 
                   variant="secondary" 
                   size="icon" 
-                  disabled={isParsing} 
+                  disabled={isCapturing || isParsing} 
                   className="h-12 w-12 rounded-xl bg-primary/15 hover:bg-primary/25 text-primary border-2 border-primary/20 shadow-md" 
                   title="Scan prescription"
                 >
-                  {isParsing ? <Loader2 size={22} className="animate-spin" /> : <Camera size={22} />}
+                  {isCapturing || isParsing ? <Loader2 size={22} className="animate-spin" /> : <Camera size={22} />}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
