@@ -256,11 +256,11 @@ export function SearchBar({
                   type="button" 
                   variant="secondary" 
                   size="icon" 
-                  disabled={isParsing} 
+                  disabled={isCapturing || isParsing} 
                   className="h-12 w-12 rounded-xl bg-primary/15 hover:bg-primary/25 text-primary border-2 border-primary/20 shadow-md" 
                   title="Scan prescription"
                 >
-                  {isParsing ? <Loader2 size={22} className="animate-spin" /> : <Camera size={22} />}
+                  {isCapturing || isParsing ? <Loader2 size={22} className="animate-spin" /> : <Camera size={22} />}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
