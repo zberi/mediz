@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Search, Mic, X, Camera, Loader2, ImagePlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { usePrescription } from '@/context/PrescriptionContext';
 import { useToast } from '@/hooks/use-toast';
+import { useNativeCamera } from '@/hooks/useNativeCamera';
 import { supabase } from '@/integrations/supabase/client';
 import {
   DropdownMenu,
