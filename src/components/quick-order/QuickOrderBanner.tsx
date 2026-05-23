@@ -70,11 +70,24 @@ export function QuickOrderBanner() {
     if (!pendingImageData) return;
     setIsSaving(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast({
+          title: 'Sign in required',
+          description: 'Please sign in to scan prescriptions.',
+          variant: 'destructive',
+        });
+        setIsSaving(false);
+        setShowConsentDialog(false);
+        setPendingImageData(null);
+        return;
+      }
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-prescription`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ imageBase64: pendingImageData.base64 })
       });
