@@ -46,24 +46,16 @@ export function QuickOrderBanner() {
     setVoiceOpen(false);
   };
 
-  const handleCameraCapture = () => cameraInputRef.current?.click();
-  const handleGallerySelect = () => fileInputRef.current?.click();
+  const onImageCaptured = (image: { base64: string; file: File }) => {
+    setPendingImageData(image);
+    setShowConsentDialog(true);
+  };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast({ title: "Invalid File", description: "Please select an image file", variant: "destructive" });
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      setPendingImageData({ base64, file });
-      setShowConsentDialog(true);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+  const handleCameraCapture = () => capturePhoto(onImageCaptured);
+  const handleGallerySelect = () => pickPhoto(onImageCaptured);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleWebFileChange(e, onImageCaptured);
   };
 
   const handleConsentConfirm = async () => {
