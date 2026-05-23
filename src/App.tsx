@@ -23,6 +23,7 @@ import ProfilePage from "./pages/ProfilePage";
 import AuthPage from "./pages/AuthPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ const App = () => (
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/auth" element={<AuthPage />} />
                     <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/privacy" element={<PrivacyPolicyPage />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>
